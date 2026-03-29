@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and status",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "isBanned": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email", "role", "isBanned"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Animated photo post",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorEmail": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "frames": { "type": "array", "items": { "type": "string" } },
+        "transition": { "type": "string", "enum": ["sharp", "smooth"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["authorId", "title", "frames", "transition"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global site settings",
+      "type": "object",
+      "properties": {
+        "welcomeText": { "type": "string" },
+        "marqueeText": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "User posts"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "Global settings"
+    }
+  }
+}

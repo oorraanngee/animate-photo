@@ -1,0 +1,182 @@
+import React, { useEffect, useState } from 'react';
+import { Link, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useAppStore } from '../store';
+import { auth, googleProvider, db } from '../firebase';
+import { signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+
+export default function Layout() {
+  const { t, i18n } = useTranslation();
+  const { user, isAdmin, isBanned } = useAppStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [recentPosts, setRecentPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (db) {
+      const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(3));
+      const unsub = onSnapshot(q, (snapshot) => {
+        setRecentPosts(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      return () => unsub();
+    }
+  }, []);
+
+  const handleLogin = async () => {
+    if (!auth) return alert(t('Setup Required'));
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error(error);
+      alert(t('Error'));
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === 'en' ? 'ru' : 'en');
+  };
+
+  const handleEmailLogin = async () => {
+    if (!auth) return alert(t('Setup Required'));
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      if (!userCred.user.emailVerified) {
+        alert(t('Email not verified'));
+        await signOut(auth);
+      }
+    } catch (error) {
+      console.error(error);
+      alert(t('Invalid credentials'));
+    }
+  };
+
+  const handleEmailRegister = async () => {
+    if (!auth) return alert(t('Setup Required'));
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCred.user);
+      alert(t('Registration successful'));
+      await signOut(auth);
+    } catch (error) {
+      console.error(error);
+      alert(t('Error'));
+    }
+  };
+
+  return (
+    <div className="min-h-screen p-4 flex justify-center bg-[#FFFFFF]">
+      <div className="w-full max-w-6xl">
+        {!db && (
+          <div className="bg-red-600 text-white p-2 text-center font-bold mb-4 border-2 border-red-800 rounded-lg">
+            {t('Setup Instructions')}
+          </div>
+        )}
+        
+        <div className="glossy-header flex justify-between items-center px-6">
+          <div className="text-2xl font-bold tracking-wider text-white drop-shadow-md">
+            Animate Photo
+          </div>
+          <div className="flex items-center gap-4 text-sm font-bold">
+            <Link to="/" className="text-white hover:text-blue-200 drop-shadow">{t('Home')}</Link>
+            <Link to="/create" className="text-white hover:text-blue-200 drop-shadow">{t('Create Animation')}</Link>
+            <Link to="/gallery" className="text-white hover:text-blue-200 drop-shadow">{t('Gallery')}</Link>
+            {isAdmin && (
+              <Link to="/admin" className="text-red-300 hover:text-red-100 drop-shadow">{t('Admin Panel')}</Link>
+            )}
+            <div className="w-px h-6 bg-white/30 mx-2"></div>
+            {user ? (
+              <div className="flex items-center gap-4">
+                <span className="text-white drop-shadow truncate max-w-[150px]" title={user.email || ''}>{user.email}</span>
+                <button onClick={handleLogout} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded border border-white/40 transition-colors shadow-sm">
+                  {t('Logout')}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="email" 
+                  placeholder={t('Email')} 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  className="px-2 py-1 rounded text-black text-xs w-32 border border-blue-800"
+                />
+                <input 
+                  type="password" 
+                  placeholder={t('Password')} 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  className="px-2 py-1 rounded text-black text-xs w-32 border border-blue-800"
+                />
+                <button onClick={handleEmailLogin} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded border border-white/40 transition-colors shadow-sm">{t('Login')}</button>
+                <button onClick={handleEmailRegister} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded border border-white/40 transition-colors shadow-sm">{t('Register')}</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-row-reverse gap-4 mt-2">
+          {/* Sidebar */}
+          <div className="w-64 shrink-0 flex flex-col gap-4 glossy-panel p-4">
+            <div className="bg-white/50 rounded p-3 border border-white/60 shadow-sm">
+              <div className="font-bold text-[#003399] mb-2 border-b border-[#003399]/20 pb-1">{t('Language')}</div>
+              <button onClick={toggleLanguage} className="glossy-btn w-full">
+                {i18n.language === 'en' ? 'Русский' : 'English'}
+              </button>
+            </div>
+
+            <div className="bg-white/50 rounded p-3 border border-white/60 shadow-sm">
+              <div className="font-bold text-[#003399] mb-2 border-b border-[#003399]/20 pb-1">{t('Menu')}</div>
+              <div className="flex flex-col gap-2">
+                <Link to="/" className="glossy-btn">{t('Home')}</Link>
+                <Link to="/create" className="glossy-btn">{t('Create Animation')}</Link>
+                <Link to="/gallery" className="glossy-btn">{t('Gallery')}</Link>
+                {isAdmin && (
+                  <Link to="/admin" className="glossy-btn text-red-700">{t('Admin Panel')}</Link>
+                )}
+              </div>
+            </div>
+
+            {!user && (
+              <div className="bg-white/50 rounded p-3 border border-white/60 shadow-sm">
+                <div className="font-bold text-[#003399] mb-2 border-b border-[#003399]/20 pb-1">{t('Account')}</div>
+                <div className="flex flex-col gap-2">
+                  <button onClick={handleLogin} className="glossy-btn">{t('Sign in with Google')}</button>
+                </div>
+              </div>
+            )}
+            
+            <div className="bg-white/50 rounded p-3 border border-white/60 shadow-sm">
+              <div className="font-bold text-[#003399] mb-2 border-b border-[#003399]/20 pb-1">{t('Recent Animations')}</div>
+              <div className="flex flex-col gap-2">
+                {recentPosts.length === 0 && <div className="text-xs text-gray-500">{t('No animations yet')}</div>}
+                {recentPosts.map(post => (
+                  <div key={post.id} className="border border-[#ccc] p-1 bg-white rounded">
+                    <div className="text-xs font-bold truncate">{post.title}</div>
+                    {post.frames && post.frames.length > 0 && (
+                      <img src={post.frames[0]} alt="preview" className="w-full h-24 object-cover mt-1 rounded" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 min-h-[500px] bg-white p-6">
+            <Outlet />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

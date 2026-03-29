@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "dimabrovcuk4@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isNotBanned() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned != true;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) 
+                    && request.resource.data.keys().hasAll(['email', 'role', 'isBanned', 'createdAt'])
+                    && request.resource.data.role in ['admin', 'user']
+                    && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isAuthenticated() 
+                    && isNotBanned()
+                    && request.resource.data.authorId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['authorId', 'authorEmail', 'title', 'frames', 'transition', 'createdAt']);
+      allow update: if isAdmin() || (isOwner(resource.data.authorId) && isNotBanned());
+      allow delete: if isAdmin() || isOwner(resource.data.authorId);
+    }
+
+    // Settings Collection
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
