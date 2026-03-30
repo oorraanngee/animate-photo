@@ -214,7 +214,7 @@ export default function Layout() {
           <div className="mb-4">
             <a href="https://github.com/oorraanngee/animate-photo" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline mx-2 font-bold">GitHub</a>
             |
-            <a href="mailto:am2004id@gmail.com" className="text-blue-600 hover:underline mx-2 font-bold">am2004id@gmail.com</a>
+            <a href="mailto:am2004idd@gmail.com" className="text-blue-600 hover:underline mx-2 font-bold">am2004idd@gmail.com</a>
           </div>
           <p className="max-w-3xl mx-auto leading-relaxed whitespace-pre-wrap">
             {t('footer_disclaimer')}
