@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://animate-photo.vercel.app/sitemap.xml
+Sitemap: https://animate-photo.vercel.app/sitemap2.xml
